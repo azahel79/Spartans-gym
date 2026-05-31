@@ -25,10 +25,12 @@ const getRequiredSecret = (key: string, fallback = '') => {
   return value;
 };
 
+const normalizeOrigin = (url: string) => url.trim().replace(/\/+$/, '');
+
 const parseUrlList = (value: string) =>
   value
     .split(',')
-    .map((url) => url.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 
 export const env = {
@@ -38,7 +40,7 @@ export const env = {
   DATABASE_URL: getRequiredEnv('DATABASE_URL'),
   JWT_SECRET: getRequiredSecret('JWT_SECRET', 'default_secret_change_me'),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+  FRONTEND_URL: normalizeOrigin(process.env.FRONTEND_URL || 'http://localhost:5173'),
   ALLOWED_ORIGINS: parseUrlList(process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173'),
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',

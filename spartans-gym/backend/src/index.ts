@@ -10,26 +10,30 @@ import productRoutes from './routes/product.routes';
 import transactionRoutes from './routes/transaction.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import configRoutes from './routes/config.routes';
-import uploadRoutes from './routes/upload.routes';
-import userRoutes from './routes/user.routes';
+import uploadRoutes from './routes/upload.routes';   
+import userRoutes from './routes/user.routes';   
 import planRoutes from './routes/plan.routes';
 import attendanceRoutes from './routes/attendance.routes';
 
 const app = express();
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || env.ALLOWED_ORIGINS.includes(origin)) {
-        callback(null, true);
-        return;
-      }
+const corsOptions = {
+  origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
+    const normalizedOrigin = origin?.replace(/\/+$/, '');
 
-      callback(new Error(`CORS origin not allowed: ${origin}`));
-    },
-    credentials: true,
-  })
-);
+    if (!normalizedOrigin || env.ALLOWED_ORIGINS.includes(normalizedOrigin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
