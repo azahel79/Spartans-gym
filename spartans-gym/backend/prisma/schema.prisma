@@ -1,0 +1,200 @@
+// prisma/schema.prisma
+
+// Configuración del generador y conexión
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MODELO: Usuario (para autenticación)
+// ============================================
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Hasheado con bcrypt
+  role      Role     @default(recepcionista)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions Transaction[]
+  attendances  Attendance[]
+
+  @@map("users")
+}
+
+// ============================================
+// MODELO: Cliente
+// ============================================
+model Client {
+  id             String         @id @default(uuid())
+  nombre         String
+  apellidos      String
+  genero         Genero         @default(Masculino)  // 👈 NUEVO: en lugar de email
+  telefono       String
+  plan           PlanType
+  monto          Decimal        @db.Decimal(10,2)
+  metodoPago     PaymentMethod
+  status         ClientStatus   @default(ACTIVO)
+  ultimaVisita   String?        // Formato HH:MM
+  vencimiento    DateTime       @map("vencimiento")
+  fotoUrl        String?        @map("foto_url")
+  attendanceDate DateTime?      @map("attendance_date")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions Transaction[]
+  attendances  Attendance[]
+
+  @@map("clients")
+}
+
+// ============================================
+// MODELO: Producto
+// ============================================
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Decimal  @db.Decimal(10,2)
+  cat       Category
+  sku       String   @unique
+  stock     Int      @default(0)
+  reorder   Int      @default(5)
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions Transaction[]
+
+  @@map("products")
+}
+
+// ============================================
+// MODELO: Transacción
+// ============================================
+model Transaction {
+  id         Int             @id @default(autoincrement())
+  fecha      String          // DD/MM/YYYY
+  hora       String          // HH:MM AM/PM
+  nombre     String
+  apellidos  String
+  clienteId  String?         @map("cliente_id")
+  concepto   String
+  monto      Decimal         @db.Decimal(10,2)
+  metodo     PaymentMethod
+  tipo       TransactionType
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  // Relaciones
+  userId     Int?            @map("user_id")
+  user       User?           @relation(fields: [userId], references: [id])
+  client     Client?         @relation(fields: [clienteId], references: [id])
+  productId  Int?            @map("product_id")
+  product    Product?        @relation(fields: [productId], references: [id])
+
+  @@map("transactions")
+}
+
+
+// Modelo para configuración del gimnasio
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  clientId  String   @map("client_id")
+  userId    Int?     @map("user_id")
+  fecha     DateTime @default(now())
+  hora      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([fecha])
+  @@map("attendances")
+}
+
+model GymConfig {
+  id        Int      @id @default(autoincrement())
+  name      String   @default("SPARTAN'S GYM")
+  email     String   @default("contacto@spartansgym.com")
+  phone     String   @default("+52 55 1234 5678")
+  address   String   @default("Avenida de los Deportes 123, Ciudad de México")
+  logo      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("gym_config")
+}
+
+// MODELO: Planes y Membresías
+// ============================================
+model Plan {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  price     Decimal  @db.Decimal(10,2)
+  period    String   @default("Mes")  // "Mes", "3 Meses", "6 Meses", "Año"
+  color     String   @default("bg-primary")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plans")
+}
+
+
+
+// ============================================
+// ENUMS (valores permitidos)
+// ============================================
+
+enum Role {
+  admin
+  recepcionista
+}
+
+enum PlanType {
+  Mensual
+  Trimestral
+  Semestral
+  Anual
+}
+
+enum PaymentMethod {
+  Efectivo
+  Tarjeta
+  Transferencia
+}
+
+enum ClientStatus {
+  ACTIVO
+  VENCIDO
+  PENDIENTE
+}
+
+enum Category {
+  Suplementos
+  Bebidas
+  Snacks
+  Merchandising
+  Accesorios
+}
+
+enum TransactionType {
+  MEMBRESIA
+  PRODUCTO
+}
+
+// 👇 NUEVO ENUM - DEFINIRLO AQUÍ
+enum Genero {
+  Masculino
+  Femenino
+  Otro
+}
