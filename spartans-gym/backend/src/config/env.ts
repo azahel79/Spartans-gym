@@ -26,6 +26,7 @@ const getRequiredSecret = (key: string, fallback = '') => {
 };
 
 const normalizeOrigin = (url: string) => url.trim().replace(/\/+$/, '');
+const normalizeValue = (value: string) => value.trim();
 
 const parseUrlList = (value: string) =>
   value
@@ -42,7 +43,7 @@ export const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   FRONTEND_URL: normalizeOrigin(process.env.FRONTEND_URL || 'http://localhost:5173'),
   ALLOWED_ORIGINS: parseUrlList(process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173'),
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+  CLOUDINARY_CLOUD_NAME: normalizeValue(process.env.CLOUDINARY_CLOUD_NAME || ''),
+  CLOUDINARY_API_KEY: normalizeValue(process.env.CLOUDINARY_API_KEY || ''),
+  CLOUDINARY_API_SECRET: normalizeValue(process.env.CLOUDINARY_API_SECRET || ''),
 };

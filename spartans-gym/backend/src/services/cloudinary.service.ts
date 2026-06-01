@@ -9,6 +9,19 @@ export interface UploadResult {
   format: string;
 }
 
+const getSafePublicId = (filename: string) => {
+  const nameWithoutExtension = filename.replace(/\.[^/.]+$/, '');
+  const safeName = nameWithoutExtension
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+
+  return `${Date.now()}-${safeName || 'product'}`;
+};
+
 /**
  * Subir una imagen a Cloudinary
  * @param buffer - Buffer del archivo (desde multer)
@@ -20,7 +33,7 @@ export async function uploadImage(buffer: Buffer, filename: string): Promise<Upl
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: 'gym-products', // Carpeta en Cloudinary
-        public_id: `${Date.now()}-${filename.split('.')[0]}`,
+        public_id: getSafePublicId(filename),
         transformation: [
           { width: 500, height: 500, crop: 'limit' }, // Redimensionar
           { quality: 'auto' }, // Optimizar calidad
