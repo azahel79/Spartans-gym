@@ -131,12 +131,14 @@ export async function createTransaction(req: Request, res: Response) {
     const fecha = now.toLocaleDateString('es-MX', { 
       day: '2-digit', 
       month: 'short', 
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'America/Mexico_City',
     });
     const hora = now.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit', 
-      hour12: true 
+      hour12: true,
+      timeZone: 'America/Mexico_City',
     });
 
     let nombre = 'Venta';

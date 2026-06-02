@@ -19,6 +19,7 @@ export const formatDate = (date: Date): string => {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    timeZone: 'America/Mexico_City',
   });
 };
 
@@ -27,6 +28,7 @@ export const formatTime = (date: Date): string => {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'America/Mexico_City',
   });
 };
 
@@ -83,7 +85,8 @@ export const formatISODate = (isoDate: string | null | undefined): string => {
   return date.toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'long',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'America/Mexico_City',
   });
 };
 
@@ -118,7 +121,8 @@ export const getRelativeDate = (attendanceDate: string | null | undefined): stri
   return date.toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'America/Mexico_City',
   });
 };
 

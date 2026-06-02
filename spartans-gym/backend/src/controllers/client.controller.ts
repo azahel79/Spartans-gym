@@ -295,7 +295,8 @@ export async function registerAttendance(req: Request, res: Response) {
     const horaActual = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',  
-      hour12: true,     
+      hour12: true,
+      timeZone: 'America/Mexico_City',
     });
 
     // ✅ Registrar asistencia (guardar con la fecha actual)

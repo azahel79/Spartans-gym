@@ -8,6 +8,21 @@ interface ReceiptLine {
 const formatMoney = (value: number) =>
   value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
+const formatMexicoDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Mexico_City',
+  });
+};
+
 const openPrintableReceipt = (title: string, lines: ReceiptLine[]) => {
   const html = `
     <!doctype html>
@@ -60,7 +75,7 @@ export const printTransactionReceipt = (transaction: Transaction) => {
 export const printAttendanceReceipt = (attendance: Attendance) => {
   openPrintableReceipt('Comprobante de asistencia', [
     { label: 'Folio', value: String(attendance.id) },
-    { label: 'Fecha', value: `${attendance.fecha} ${attendance.hora}` },
+    { label: 'Fecha', value: `${formatMexicoDateTime(attendance.fecha)} (${attendance.hora})` },
     { label: 'Socio', value: `${attendance.nombre} ${attendance.apellidos}` },
     { label: 'Plan', value: attendance.plan },
     { label: 'Estado', value: attendance.status },
@@ -69,7 +84,7 @@ export const printAttendanceReceipt = (attendance: Attendance) => {
 
 export const printSaleReceipt = (items: Array<{ name: string; quantity: number; price: number }>, paymentMethod: string, total: number) => {
   openPrintableReceipt('Ticket de venta', [
-    { label: 'Fecha', value: new Date().toLocaleString('es-MX') },
+    { label: 'Fecha', value: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }) },
     ...items.map((item) => ({
       label: `${item.name} x${item.quantity}`,
       value: formatMoney(item.price * item.quantity),
