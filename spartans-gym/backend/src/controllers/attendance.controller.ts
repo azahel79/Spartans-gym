@@ -3,10 +3,11 @@ import { prisma } from '../config/database';
 
 function getLocalDateRange(dateStr: string) {
   const [year, month, day] = dateStr.split('-').map(Number);
+  const mexicoCityOffsetHours = 6;
 
   return {
-    startUTC: new Date(year, month - 1, day, 0, 0, 0, 0),
-    endUTC: new Date(year, month - 1, day, 23, 59, 59, 999),
+    startUTC: new Date(Date.UTC(year, month - 1, day, mexicoCityOffsetHours, 0, 0, 0)),
+    endUTC: new Date(Date.UTC(year, month - 1, day + 1, mexicoCityOffsetHours, 0, 0, -1)),
   };
 }
 

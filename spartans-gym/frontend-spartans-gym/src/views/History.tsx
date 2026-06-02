@@ -27,7 +27,10 @@ const getDateRange = (preset: DatePreset): Pick<HistoryFilters, 'startDate' | 'e
   const today = new Date();
 
   if (preset === 'all') return { startDate: '', endDate: '' };
-  if (preset === 'today') return { startDate: toInputDate(today), endDate: '' };
+  if (preset === 'today') {
+    const value = toInputDate(today);
+    return { startDate: value, endDate: value };
+  }
 
   if (preset === 'yesterday') {
     const yesterday = new Date(today);

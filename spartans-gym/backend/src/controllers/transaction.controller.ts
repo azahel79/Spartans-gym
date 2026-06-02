@@ -21,6 +21,16 @@ function getLocalDateRange(dateStr: string) {
   };
 }
 
+function getMexicoCityDateRange(dateStr: string) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const mexicoCityOffsetHours = 6;
+
+  return {
+    startUTC: new Date(Date.UTC(year, month - 1, day, mexicoCityOffsetHours, 0, 0, 0)),
+    endUTC: new Date(Date.UTC(year, month - 1, day + 1, mexicoCityOffsetHours, 0, 0, -1)),
+  };
+}
+
 export async function getTransactions(req: Request, res: Response) {
   try {
     const { tipo, metodo, fechaInicio, fechaFin } = req.query;
@@ -32,7 +42,7 @@ export async function getTransactions(req: Request, res: Response) {
 
     // ✅ FILTRO POR RANGO DE FECHAS ajustado a zona horaria local
     if (fechaInicio) {
-      const { startUTC, endUTC } = getLocalDateRange(fechaInicio as string);
+      const { startUTC, endUTC } = getMexicoCityDateRange(fechaInicio as string);
       
       where.createdAt = {
         gte: startUTC,
@@ -46,7 +56,7 @@ export async function getTransactions(req: Request, res: Response) {
     
     // Si hay fechaFin, ajustar también
     if (fechaFin && fechaFin !== fechaInicio) {
-      const { startUTC, endUTC } = getLocalDateRange(fechaFin as string);
+      const { startUTC, endUTC } = getMexicoCityDateRange(fechaFin as string);
       
       where.createdAt = {
         ...where.createdAt,
