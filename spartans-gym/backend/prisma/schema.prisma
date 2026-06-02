@@ -37,7 +37,7 @@ model Client {
   apellidos      String
   genero         Genero         @default(Masculino)  // 👈 NUEVO: en lugar de email
   telefono       String
-  plan           PlanType
+  plan           String
   monto          Decimal        @db.Decimal(10,2)
   metodoPago     PaymentMethod
   status         ClientStatus   @default(ACTIVO)
@@ -158,13 +158,6 @@ model Plan {
 enum Role {
   admin
   recepcionista
-}
-
-enum PlanType {
-  Mensual
-  Trimestral
-  Semestral
-  Anual
 }
 
 enum PaymentMethod {

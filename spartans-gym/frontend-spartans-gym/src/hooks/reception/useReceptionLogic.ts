@@ -9,9 +9,6 @@ import type { Client, PaymentMethod, PlanType } from "../../types";
 
 type Genero = Client['genero'];
 
-const isPlanType = (plan: string): plan is PlanType =>
-  ['Mensual', 'Trimestral', 'Semestral', 'Anual'].includes(plan);
-
 const useReceptionLogic = () => {
   const { 
     selectedClient, 
@@ -59,7 +56,7 @@ const useReceptionLogic = () => {
 
   // ✅ OBTENER LISTA DE NOMBRES DE PLANES PARA EL SELECT
   const planOptions = useMemo(() => {
-    return plans.map(plan => plan.name).filter(isPlanType);
+    return plans.map(plan => plan.name);
   }, [plans]);
 
   // Función auxiliar para días restantes

@@ -17,7 +17,7 @@ export interface Client {
   updatedAt: string;
 }
 
-export type PlanType = 'Mensual' | 'Trimestral' | 'Semestral' | 'Anual';
+export type PlanType = string;
 
 export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia';
 

@@ -2,23 +2,34 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database';
 
-function calculateExpiryDate(baseDate: Date, plan: string): Date {
+function getPlanMonths(planName: string, period?: string): number {
+  const text = `${planName} ${period || ''}`.toLowerCase();
+  const monthMatch = text.match(/(\d+)\s*(mes|meses|month|months)/);
+
+  if (monthMatch) return Number(monthMatch[1]);
+  if (text.includes('trimestral')) return 3;
+  if (text.includes('semestral')) return 6;
+  if (text.includes('anual') || text.includes('año') || text.includes('ano') || text.includes('year')) return 12;
+
+  return 1;
+}
+
+function calculateExpiryDate(baseDate: Date, plan: string, period?: string): Date {
   const expiry = new Date(baseDate);
-  switch (plan) {
-    case 'Mensual':
-      expiry.setMonth(expiry.getMonth() + 1);
-      break;
-    case 'Trimestral':
-      expiry.setMonth(expiry.getMonth() + 3);
-      break;
-    case 'Semestral':
-      expiry.setMonth(expiry.getMonth() + 6);
-      break;
-    case 'Anual':
-      expiry.setFullYear(expiry.getFullYear() + 1);
-      break;
-  }
+  expiry.setMonth(expiry.getMonth() + getPlanMonths(plan, period));
   return expiry;
+}
+
+async function getActivePlanByName(planName: string) {
+  const selectedPlan = await prisma.plan.findUnique({
+    where: { name: planName },
+  });
+
+  if (!selectedPlan || !selectedPlan.isActive) {
+    return null;
+  }
+
+  return selectedPlan;
 }
 
 // Crear un nuevo cliente (MODIFICADO - email removido, genero agregado)
@@ -42,9 +53,18 @@ export async function createClient(req: Request, res: Response) {
       });
     }
 
+    const selectedPlanRecord = await getActivePlanByName(plan);
+
+    if (!selectedPlanRecord) {
+      return res.status(400).json({
+        success: false,
+        error: 'Plan inválido o inactivo',
+      });
+    }
+
     // Calcular fecha de vencimiento
     const now = new Date();
-    const vencimiento = calculateExpiryDate(now, plan);
+    const vencimiento = calculateExpiryDate(now, plan, selectedPlanRecord.period);
 
     const newClient = await prisma.client.create({
       data: {
@@ -52,7 +72,7 @@ export async function createClient(req: Request, res: Response) {
         apellidos,
         genero: genero as any,
         telefono,
-        plan: plan as any,
+        plan,
         monto,
         metodoPago: metodoPago as any,
         status: 'ACTIVO',
@@ -338,16 +358,25 @@ export async function renewMembership(req: Request, res: Response) {
       });
     }
 
+    const selectedPlanRecord = await getActivePlanByName(newPlan);
+
+    if (!selectedPlanRecord) {
+      return res.status(400).json({
+        success: false,
+        error: 'Plan inválido o inactivo',
+      });
+    }
+
     // Calcular nueva fecha de vencimiento
     const now = new Date();
     const currentExpiry = new Date(client.vencimiento);
     const baseDate = currentExpiry > now ? currentExpiry : now;
-    const newExpiry = calculateExpiryDate(baseDate, newPlan);
+    const newExpiry = calculateExpiryDate(baseDate, newPlan, selectedPlanRecord.period);
 
     const updatedClient = await prisma.client.update({
       where: { id },
       data: {
-        plan: newPlan as any,
+        plan: newPlan,
         monto: amount,
         metodoPago: paymentMethod as any,
         vencimiento: newExpiry,

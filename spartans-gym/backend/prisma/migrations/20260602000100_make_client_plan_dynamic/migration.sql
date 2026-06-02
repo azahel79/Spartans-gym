@@ -1,0 +1,1 @@
+ALTER TABLE `clients` MODIFY `plan` VARCHAR(191) NOT NULL;
