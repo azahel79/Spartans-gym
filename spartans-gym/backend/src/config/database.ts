@@ -1,5 +1,5 @@
 // src/config/database.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'; 
 
 // PrismaClient se conecta automáticamente a la BD usando DATABASE_URL del .env
 export const prisma = new PrismaClient();

@@ -1,5 +1,5 @@
 // src/config/cloudinary.ts
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';  
 import { env } from './env';
 
 cloudinary.config({
@@ -8,4 +8,4 @@ cloudinary.config({
   api_secret: env.CLOUDINARY_API_SECRET,
 });
 
-export default cloudinary;
+export default cloudinary;  
