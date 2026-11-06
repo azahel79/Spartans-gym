@@ -1,0 +1,371 @@
+// prisma/schema.prisma
+
+// Configuración del generador y conexión
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// MODELO: Usuario (para autenticación)
+// ============================================
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Hasheado con bcrypt
+  role      Role     @default(recepcionista)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions       Transaction[]
+  attendances        Attendance[]
+  cashShifts         CashShift[]
+  workoutRoutines    WorkoutRoutine[]
+  workoutAssignments WorkoutAssignment[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+// ============================================
+// MODELO: Cliente
+// ============================================
+model Client {
+  id             String         @id @default(uuid())
+  nombre         String
+  apellidos      String
+  genero         Genero         @default(Masculino)  // ðŸ‘ˆ NUEVO: en lugar de email
+  telefono       String
+  whatsappOptIn  Boolean        @default(false) @map("whatsapp_opt_in")
+  plan           String
+  monto          Decimal        @db.Decimal(10,2)
+  metodoPago     PaymentMethod
+  status         ClientStatus   @default(ACTIVO)
+  ultimaVisita   String?        // Formato HH:MM
+  vencimiento    DateTime       @map("vencimiento")
+  fotoUrl        String?        @map("foto_url")
+  attendanceDate DateTime?      @map("attendance_date")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions       Transaction[]
+  attendances        Attendance[]
+  notifications      Notification[]
+  workoutAssignments WorkoutAssignment[]
+
+  @@map("clients")
+}
+
+// ============================================
+// MODELO: Producto
+// ============================================
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Decimal  @db.Decimal(10,2)
+  cat       Category
+  sku       String   @unique
+  stock     Int      @default(0)
+  reorder   Int      @default(5)
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relación con transacciones
+  transactions Transaction[]
+
+  @@map("products")
+}
+
+// ============================================
+// MODELO: Transacción
+// ============================================
+model Transaction {
+  id         Int             @id @default(autoincrement())
+  fecha      String          // DD/MM/YYYY
+  hora       String          // HH:MM AM/PM
+  nombre     String
+  apellidos  String
+  clienteId  String?         @map("cliente_id")
+  concepto   String
+  monto      Decimal         @db.Decimal(10,2)
+  metodo     PaymentMethod
+  tipo       TransactionType
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  // Relaciones
+  userId      Int?            @map("user_id")
+  user        User?           @relation(fields: [userId], references: [id])
+  cashShiftId String?         @map("cash_shift_id")
+  cashShift   CashShift?      @relation(fields: [cashShiftId], references: [id], onDelete: SetNull)
+  client      Client?         @relation(fields: [clienteId], references: [id])
+  productId  Int?            @map("product_id")
+  product    Product?        @relation(fields: [productId], references: [id])
+
+  @@index([cashShiftId])
+  @@map("transactions")
+}
+
+
+// Modelo para configuración del gimnasio
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  clientId  String   @map("client_id")
+  dayKey    String   @map("day_key")
+  userId    Int?     @map("user_id")
+  cashShiftId String? @map("cash_shift_id")
+  fecha     DateTime @default(now())
+  hora      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cashShift CashShift? @relation(fields: [cashShiftId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([cashShiftId])
+  @@index([fecha])
+  @@unique([clientId, dayKey])
+  @@map("attendances")
+}
+
+model CashShift {
+  id           String          @id @default(uuid())
+  userId       Int             @map("user_id")
+  shiftType    CashShiftType   @map("shift_type")
+  status       CashShiftStatus @default(OPEN)
+  dayKey       String          @map("day_key")
+  openingCash  Decimal         @default(0) @map("opening_cash") @db.Decimal(10,2)
+  expectedCash Decimal?        @map("expected_cash") @db.Decimal(10,2)
+  declaredCash Decimal?        @map("declared_cash") @db.Decimal(10,2)
+  difference   Decimal?        @db.Decimal(10,2)
+  openedAt     DateTime        @default(now()) @map("opened_at")
+  closedAt     DateTime?       @map("closed_at")
+  openingNotes String?         @map("opening_notes")
+  closingNotes String?         @map("closing_notes")
+  report       Json?
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+  attendances  Attendance[]
+
+  @@index([userId])
+  @@index([dayKey])
+  @@index([status])
+  @@index([openedAt])
+  @@map("cash_shifts")
+}
+
+model Notification {
+  id             Int                @id @default(autoincrement())
+  clientId       String             @map("client_id")
+  kind           NotificationKind
+  status         NotificationStatus @default(PENDING)
+  dedupeKey      String             @unique @map("dedupe_key")
+  templateName   String             @map("template_name")
+  recipient      String
+  referenceDate  DateTime?          @map("reference_date")
+  daysBefore     Int?               @map("days_before")
+  providerId     String?            @map("provider_id")
+  error          String?
+  attempts       Int                @default(0)
+  sentAt         DateTime?          @map("sent_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([clientId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model GymConfig {
+  id        Int      @id @default(autoincrement())
+  name      String   @default("SPARTAN'S GYM")
+  email     String   @default("contacto@spartansgym.com")
+  phone     String   @default("+52 55 1234 5678")
+  address   String   @default("Avenida de los Deportes 123, Ciudad de México")
+  logo      String?
+  appearance Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("gym_config")
+}
+
+// MODELO: Planes y Membresías
+// ============================================
+model Plan {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  price     Decimal  @db.Decimal(10,2)
+  period    String   @default("Mes")  // "Mes", "3 Meses", "6 Meses", "Año"
+  color     String   @default("bg-primary")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plans")
+}
+
+model WorkoutRoutine {
+  id                 String              @id @default(uuid())
+  trainerId          Int                 @map("trainer_id")
+  name               String
+  level              WorkoutLevel
+  objective          String
+  durationWeeks      Int                 @default(4) @map("duration_weeks")
+  daysPerWeek        Int                 @default(3) @map("days_per_week")
+  sessionTimeMinutes Int?                @map("session_time_minutes")
+  notes              String?
+  days               Json
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  trainer     User                @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+  assignments WorkoutAssignment[]
+
+  @@index([trainerId])
+  @@index([level])
+  @@index([isActive])
+  @@map("workout_routines")
+}
+
+model WorkoutAssignment {
+  id          String                  @id @default(uuid())
+  routineId   String                  @map("routine_id")
+  clientId    String                  @map("client_id")
+  trainerId   Int                     @map("trainer_id")
+  startDate   DateTime                @map("start_date")
+  endDate     DateTime?               @map("end_date")
+  status      WorkoutAssignmentStatus @default(ACTIVE)
+  clientNotes String?                 @map("client_notes")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  routine WorkoutRoutine @relation(fields: [routineId], references: [id], onDelete: Restrict)
+  client  Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  trainer User           @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+
+  @@index([routineId])
+  @@index([clientId])
+  @@index([trainerId])
+  @@index([status])
+  @@map("workout_assignments")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     Int?     @map("user_id")
+  userEmail  String?  @map("user_email")
+  userRole   Role?    @map("user_role")
+  action     String
+  entity     String
+  entityId   String?  @map("entity_id")
+  summary    String
+  metadata   Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+
+
+// ============================================
+// ENUMS (valores permitidos)
+// ============================================
+
+enum Role {
+  superadmin
+  admin
+  recepcionista
+  entrenador
+}
+
+enum PaymentMethod {
+  Efectivo
+  Tarjeta
+  Transferencia
+}
+
+enum ClientStatus {
+  ACTIVO
+  VENCIDO
+  PENDIENTE
+}
+
+enum Category {
+  Suplementos
+  Bebidas
+  Snacks
+  Merchandising
+  Accesorios
+}
+
+enum TransactionType {
+  MEMBRESIA
+  PRODUCTO
+}
+
+// ðŸ‘‡ NUEVO ENUM - DEFINIRLO AQUÍ
+enum Genero {
+  Masculino
+  Femenino
+  Otro
+}
+
+enum NotificationKind {
+  WELCOME
+  EXPIRY_REMINDER
+  EXPIRED
+  RENEWAL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum CashShiftType {
+  MORNING
+  EVENING
+}
+
+enum CashShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum WorkoutLevel {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+}
+
+enum WorkoutAssignmentStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
